@@ -7,7 +7,7 @@
 using namespace std;
 
 namespace MeshLibrary {
-bool importMesh(const string& path, PolygonalMesh& mesh, double tol1D, double tol2D)
+bool importMesh(const string& path, PolygonalMesh& mesh)
 {
     if (!importCell0Ds(path+ "./Cell0Ds.csv", mesh))
         return false;
@@ -23,7 +23,7 @@ bool importMesh(const string& path, PolygonalMesh& mesh, double tol1D, double to
         }
     }
 
-    if (!importCell1Ds(path+ "./Cell1Ds.csv", mesh, tol1D))
+    if (!importCell1Ds(path+ "./Cell1Ds.csv", mesh))
         return false;
     else{//controllo sui marker
         cout<<"Cells1D:"<<endl;
@@ -35,9 +35,10 @@ bool importMesh(const string& path, PolygonalMesh& mesh, double tol1D, double to
             cout <<endl;
 
         }
+
     }
 
-    if (!importCell2Ds(path+ "./Cell2Ds.csv", mesh, tol2D))
+    if (!importCell2Ds(path+ "./Cell2Ds.csv", mesh))
         return false;
     else{//per controllo che numero di lati e vertici coincidano
         for(unsigned int i=0;i<mesh.NumberofCell2Ds;i++){
@@ -64,7 +65,7 @@ bool importCell0Ds(const string& fileName, PolygonalMesh& mesh){
     file.close();
 
     mesh.NumberofCell0Ds= lines.size(); //il numero di righe del file corrisponde al numero di vertici
-    //mesh.CoordinatesCell0Ds.reserve(mesh.NumberofCell0Ds); //modifico la capacità per allocare la giusta memoria
+    mesh.CoordinatesCell0Ds.reserve(mesh.NumberofCell0Ds); //modifico la capacità per allocare la giusta memoria
     mesh.IdCell0Ds.reserve(mesh.NumberofCell0Ds);
     mesh.MarkerCell0Ds.reserve(mesh.NumberofCell0Ds);
 
@@ -80,9 +81,7 @@ bool importCell0Ds(const string& fileName, PolygonalMesh& mesh){
 
         mesh.IdCell0Ds.push_back(id); //popolo i vettori
         mesh.MarkerCell0Ds.push_back(marker);
-        //mesh.CoordinatesCell0Ds.push_back(coordinates);
-        mesh.CoordinatesMap.insert({id,coordinates});
-
+        mesh.CoordinatesCell0Ds.push_back(coordinates);
 
         if (marker!=0){
             auto ret=mesh.VerticesMarker.insert({marker,{id}});
@@ -97,7 +96,7 @@ bool importCell0Ds(const string& fileName, PolygonalMesh& mesh){
 
 }
 
-bool importCell1Ds(const string& fileName, PolygonalMesh& mesh, double tol1D){
+bool importCell1Ds(const string& fileName, PolygonalMesh& mesh){
     ifstream file(fileName);
     if(file.fail())
         return false;
@@ -126,31 +125,25 @@ bool importCell1Ds(const string& fileName, PolygonalMesh& mesh, double tol1D){
         char c;
         array<unsigned int,2> vertices;
         convert>>id>>c>>marker>>c>>vertices[0]>>c>>vertices[1];
-        if (sqrt(pow((mesh.CoordinatesMap[vertices[0]])[0]-(mesh.CoordinatesMap[vertices[1]])[0],2)+//guardo se la distanza tra i punti è maggiore della tolleranza
-                 pow((mesh.CoordinatesMap[vertices[0]])[1]-(mesh.CoordinatesMap[vertices[1]])[1],2))>tol1D){
-            mesh.IdCell1Ds.push_back(id);
-            mesh.MarkerCell1Ds.push_back(marker);
-            mesh.VerticesCell1Ds.push_back(vertices);
 
-            if (marker!=0){
-                auto ret=mesh.VerticesMarker.insert({marker,{id}});
-                if(!ret.second) //se la chiave già esisteva devo aggiungere alla lista
-                    mesh.EdgesMarker[marker].push_back(id); //aggiunge
-            }
+        mesh.IdCell1Ds.push_back(id);
+        mesh.MarkerCell1Ds.push_back(marker);
+        mesh.VerticesCell1Ds.push_back(vertices);
 
-        }
-        else {
-            mesh.NumberofCell1Ds=mesh.NumberofCell1Ds-1; //diminuisco il numero se non lo inserisco
+        if (marker!=0){
+            auto ret=mesh.VerticesMarker.insert({marker,{id}});
+            if(!ret.second) //se la chiave già esisteva devo aggiungere alla lista
+                mesh.EdgesMarker[marker].push_back(id); //aggiunge
         }
 
-    }
+        }
 
     return true;
 
 
 }
 
-bool importCell2Ds(const string& fileName, PolygonalMesh& mesh, double tol2D){
+bool importCell2Ds(const string& fileName, PolygonalMesh& mesh){
     ifstream file(fileName);
     if(file.fail())
         return false;
@@ -197,24 +190,11 @@ bool importCell2Ds(const string& fileName, PolygonalMesh& mesh, double tol2D){
             convert>>c>>v;
             edges.push_back(v);
         }
-        //calcolo l'area del poligono (0.5*sum(0>n-1)(x(i)y(i+1)-x(i+1)y(i))
-        double A=0.0;
-        for (unsigned int i=0;i<nEdges-1;i++){
-            A=A+(mesh.CoordinatesMap[edges[i]])[0]*(mesh.CoordinatesMap[edges[i+1]])[1]-
-                (mesh.CoordinatesMap[edges[i+1]])[0]*(mesh.CoordinatesMap[edges[i]])[1];
-        }
-        //aggiungo l'ultimo con il primo
-        A=A+(mesh.CoordinatesMap[edges[nEdges-1]])[0]*(mesh.CoordinatesMap[edges[0]])[1]-
-            (mesh.CoordinatesMap[edges[0]])[0]*(mesh.CoordinatesMap[edges[nEdges-1]])[1];
-        A=0.5*abs(A);
-        //controllo che l'area sia maggiore della tolleranza
-        if (A>tol2D){
+
         mesh.IdCell2Ds.push_back(id); //popolo i vettori
         mesh.VerticesCell2Ds.push_back(vertices);
-        mesh.EdgesCell2Ds.push_back(edges);}
-        else {
-            mesh.NumberofCell2Ds=mesh.NumberofCell2Ds-1; //diminuisco il numero
-        }
+        mesh.EdgesCell2Ds.push_back(edges);
+
 
     }
 
@@ -222,7 +202,7 @@ bool importCell2Ds(const string& fileName, PolygonalMesh& mesh, double tol2D){
 
 
 }
-}
+
 double setTol1D() {
     double tolUtente;
     cout<<"Inserire tolleranza per la distanza tra punti: "<<endl;
@@ -242,3 +222,38 @@ double setTol2D(const double tol1D) {
     return tol;
 }
 
+void testEdges(PolygonalMesh& mesh, const double tol1D){
+    for(auto& id: mesh.IdCell1Ds){
+        unsigned int idStart= (mesh.VerticesCell1Ds[id])[0];
+        unsigned int idEnd= (mesh.VerticesCell1Ds[id])[1];
+
+        if (sqrt(pow((mesh.CoordinatesCell0Ds[idStart])[0]-(mesh.CoordinatesCell0Ds[idEnd])[0],2)+//guardo se la distanza tra i punti è minore della tolleranza
+                 pow((mesh.CoordinatesCell0Ds[idStart])[1]-(mesh.CoordinatesCell0Ds[idEnd])[1],2))<tol1D){
+            cerr<<"ERROR: "<<id<<" has zero length"<<endl;
+        }
+    }
+}
+
+void testPolygons(PolygonalMesh& mesh, const double tol2D){
+    for(auto& id:mesh.IdCell2Ds){
+        vector<unsigned int> idV = mesh.VerticesCell2Ds[id];
+        //calcolo l'area del poligono (0.5*sum(0>n-1)(x(i)y(i+1)-x(i+1)y(i))
+        double A=0.0;
+        for (unsigned int i=0;i<idV.size()-1;i++){
+            A=A+NormCrossPr(mesh.CoordinatesCell0Ds[idV[i]],mesh.CoordinatesCell0Ds[idV[i+1]]);
+        }
+        //aggiungo l'ultimo con il primo
+        A=A+NormCrossPr(mesh.CoordinatesCell0Ds[idV[0]],mesh.CoordinatesCell0Ds[idV[idV.size()-1]]);
+        A=0.5*A;
+        if (A<tol2D){
+            cerr<<"ERROR: "<<id<<" has zero area"<<endl;
+        }
+    }
+
+}
+
+
+double NormCrossPr(Vector2d& v1, Vector2d& v2){
+    return abs(v1[0]*v2[1]-v1[1]*v2[0]);
+}
+}

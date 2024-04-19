@@ -12,9 +12,10 @@ int main()
     double tol2D=setTol2D(tol1D);
     PolygonalMesh mesh;
     string path="./PolygonalMesh"; //nome della cartella
-    if(!importMesh(path,mesh,tol1D,tol2D))
+    if(!importMesh(path,mesh))
         return 1; //se qualcosa va storto
-
+    testEdges(mesh,tol1D);
+    testPolygons(mesh,tol2D);
 
     return 0;
 }

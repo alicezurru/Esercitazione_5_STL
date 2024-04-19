@@ -12,8 +12,7 @@ struct PolygonalMesh {
     //Cell0D
     unsigned int NumberofCell0Ds;
     vector<unsigned int> IdCell0Ds={};
-    //vector<Vector2d> CoordinatesCell0Ds; //uso eigen perchè potrei aver bisogno di operazioni matematiche
-    map<unsigned int,Vector2d> CoordinatesMap; //SCEGLI UNA TRA QUESTA E PRECEDENTE
+    vector<Vector2d> CoordinatesCell0Ds; //uso eigen perchè potrei aver bisogno di operazioni matematiche
     vector<unsigned int> MarkerCell0Ds = {};
 
     //Cell1D
